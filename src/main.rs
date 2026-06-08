@@ -51,12 +51,14 @@ fn main() {
         gl.viewport(0, 0, 800, 600);
     }
 
-    let (program, vao) = unsafe { setup_triangle(&gl) };
+    let (program, vao, vbo) = unsafe { setup_triangle(&gl) };
     println!("Created triangle");
 
     unsafe {
         gl.clear_color(0.1, 0.2, 0.3, 1.0);
     }
+
+    let mut frame_count: f32 = 0.0;
 
     // Gets sdl2's event queue. Anything that happened from IO
     let mut event_pump = sdl.event_pump().unwrap();
@@ -74,10 +76,29 @@ fn main() {
                 _ => {}
             }
         }
-        // Set up the new windonw
+
+        // Animation logic here
+        frame_count += 0.05;
+        let top_x = frame_count.sin() * 0.5;
+        let new_vertices: &[f32] = &[
+            top_x, -0.5, // Bottom left
+            0.5, top_x, // Bottom right
+            top_x, 0.5, // Top (Moving!)
+        ];
+
+
+        // Set up the window rendering
         unsafe {
             gl.clear_color(0.1, 0.2, 0.3, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT);
+
+            gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+            gl.buffer_data_u8_slice(
+                glow::ARRAY_BUFFER,
+                bytemuck::cast_slice(new_vertices),
+                glow::DYNAMIC_DRAW,
+            );
+
             gl.use_program(Some(program));
             gl.bind_vertex_array(Some(vao));
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
@@ -90,7 +111,7 @@ fn main() {
     }
 }
 
-unsafe fn setup_triangle(gl: &glow::Context) -> (glow::NativeProgram, glow::NativeVertexArray) {
+unsafe fn setup_triangle(gl: &glow::Context) -> (glow::NativeProgram, glow::NativeVertexArray, glow::NativeBuffer) {
     //Same as shaders in C++
     // Vert shader
     let vs_src = r#"#version 330 core
@@ -138,12 +159,12 @@ unsafe fn setup_triangle(gl: &glow::Context) -> (glow::NativeProgram, glow::Nati
         gl.buffer_data_u8_slice(
             glow::ARRAY_BUFFER,
             bytemuck::cast_slice(vertices),
-            glow::STATIC_DRAW,
+            glow::DYNAMIC_DRAW,
         );
     }
 
     gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
     gl.enable_vertex_attrib_array(0);
 
-    (program, vao)
+    (program, vao, vbo)
 }
