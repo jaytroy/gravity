@@ -4,4 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# Essentially byte casting
+bytemuck = "1.25.0"
+# OpenGL bindings
 glow = "0.17.0"
+# Bindings for a cross platform C library that provides access to IO & graphics
+sdl2 = { version = "0.38", features = ["bundled"] }
