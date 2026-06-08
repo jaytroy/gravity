@@ -8,17 +8,24 @@ fn main() {
 
     // Set up GL attributes
     let gl_attr = video.gl_attr();
+    gl_attr.set_double_buffer(true);
+    gl_attr.set_depth_size(24);
     gl_attr.set_context_profile(sdl2::video::GLProfile::Core);
     gl_attr.set_context_version(3, 3);
 
     let window = video
         .window("glow demo", 800, 600)
         .opengl()
+        .resizable()
         .build()
         .unwrap();
+    println!("created window");
 
     // Create gl context on above window
     let _gl_context = window.gl_create_context().unwrap();
+    window.gl_make_current(&_gl_context).unwrap();
+
+
 
     // Creates actual "GL". All GL calls will pass through this
     // Glow takes a string and passes it to sdl2
@@ -29,8 +36,23 @@ fn main() {
     let gl = unsafe {
         glow::Context::from_loader_function(|s| video.gl_get_proc_address(s) as *const _)
     };
+    println!("Created gl");
+
+    unsafe {
+        let renderer = gl.get_parameter_string(glow::RENDERER);
+        let vendor = gl.get_parameter_string(glow::VENDOR);
+        let version = gl.get_parameter_string(glow::VERSION);
+        println!("GPU Vendor: {}", vendor);
+        println!("GPU Renderer: {}", renderer);
+        println!("OpenGL Version: {}", version);
+    }
+
+    unsafe {
+        gl.viewport(0, 0, 800, 600);
+    }
 
     let (program, vao) = unsafe { setup_triangle(&gl) };
+    println!("Created triangle");
 
     unsafe {
         gl.clear_color(0.1, 0.2, 0.3, 1.0);
@@ -41,6 +63,7 @@ fn main() {
     // 'main is a label for an infinite loop
     //
     'main: loop {
+        //println!("loop");
         // Gets all pending events that happened since last frame
         for event in event_pump.poll_iter() {
             match event {
@@ -59,6 +82,7 @@ fn main() {
             gl.bind_vertex_array(Some(vao));
             gl.draw_arrays(glow::TRIANGLES, 0, 3);
         }
+
         // OpenGL will render into a back buffer
         // This swaps the back buffer with the one we just wiped, rending our image
         // => double buffering
@@ -109,7 +133,7 @@ unsafe fn setup_triangle(gl: &glow::Context) -> (glow::NativeProgram, glow::Nati
     let vbo = gl.create_buffer().unwrap();
     gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
 
-    let vertices: &[f32] = &[-0.5, -0.5, 0.5, -0.5, 0.0, 0.5];
+    let vertices: &[f32] = &[-0.10, -0.5, 0.5, -0.10, 0.0, 0.5];
     unsafe {
         gl.buffer_data_u8_slice(
             glow::ARRAY_BUFFER,
