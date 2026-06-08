@@ -1,3 +1,6 @@
+extern crate core;
+
+use std::f32::consts::PI;
 use glow::HasContext;
 
 fn main() {
@@ -58,7 +61,9 @@ fn main() {
         gl.clear_color(0.1, 0.2, 0.3, 1.0);
     }
 
-    let mut frame_count: f32 = 0.0;
+    let mut v1: f32 = 0.0;
+    let mut v2: f32 = 2.0 * PI / 3.0;
+    let mut v3: f32 = 4.0 * PI / 3.0;
 
     // Gets sdl2's event queue. Anything that happened from IO
     let mut event_pump = sdl.event_pump().unwrap();
@@ -78,14 +83,38 @@ fn main() {
         }
 
         // Animation logic here
-        frame_count += 0.05;
-        let top_x = frame_count.sin() * 0.5;
-        let new_vertices: &[f32] = &[
-            top_x, -0.5, // Bottom left
-            0.5, top_x, // Bottom right
-            top_x, 0.5, // Top (Moving!)
-        ];
 
+        //implement trait on vertex
+        if v1 >= 2.0 * PI {
+            v1 = 0.0
+        }
+        if v2 >= 2.0 * PI {
+            v2 = 0.0
+        }
+        if v3 >= 2.0 * PI {
+            v3 = 0.0
+        }
+        v1 += 0.01;
+        v2 += 0.01;
+        v3 += 0.01;
+
+        let v1_x = v1.sin() * 0.5;
+        let v1_y = v1.cos() * 0.5;
+
+        let v2_x = v2.sin() * 0.5;
+        let v2_y = v2.cos() * 0.5;
+
+        let v3_x = v3.sin() * 0.5;
+        let v3_y = v3.cos() * 0.5;
+
+        //Sanity check: Get length of an edge
+        println!("{}",(((v1_x - v2_x)*(v1_x - v2_x) + (v1_y - v2_y)*(v1_y - v2_y)).abs()).sqrt() );
+
+        let new_vertices: &[f32] = &[
+            v1_x, v1_y, // v1
+            v2_x, v2_y, // v2
+            v3_x, v3_y, // v3
+        ];
 
         // Set up the window rendering
         unsafe {
