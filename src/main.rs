@@ -1,7 +1,6 @@
-extern crate core;
-
 use std::f32::consts::PI;
 use glow::HasContext;
+use sdl2::mouse::MouseState;
 
 fn main() {
     // Init sdl
@@ -25,9 +24,11 @@ fn main() {
     println!("created window");
 
     // Create gl context on above window
-    let _gl_context = window.gl_create_context().unwrap();
-    window.gl_make_current(&_gl_context).unwrap();
+    let gl_context = window.gl_create_context().unwrap();
+    window.gl_make_current(&gl_context).unwrap();
 
+    // Gets sdl2's event queue. Anything that happened from IO
+    let mut event_pump = sdl.event_pump().unwrap();
 
 
     // Creates actual "GL". All GL calls will pass through this
@@ -41,6 +42,7 @@ fn main() {
     };
     println!("Created gl");
 
+    //GPU log
     unsafe {
         let renderer = gl.get_parameter_string(glow::RENDERER);
         let vendor = gl.get_parameter_string(glow::VENDOR);
@@ -52,25 +54,20 @@ fn main() {
 
     unsafe {
         gl.viewport(0, 0, 800, 600);
-    }
-
-    let (program, vao, vbo) = unsafe { setup_triangle(&gl) };
-    println!("Created triangle");
-
-    unsafe {
         gl.clear_color(0.1, 0.2, 0.3, 1.0);
     }
+
+    let (program, vao, vbo) = unsafe {
+        let program_2d = gl.create_program().unwrap();
+        setup_triangle(&gl, program_2d)
+    };
+    println!("Created triangle");
 
     let mut v1: f32 = 0.0;
     let mut v2: f32 = 2.0 * PI / 3.0;
     let mut v3: f32 = 4.0 * PI / 3.0;
-
-    // Gets sdl2's event queue. Anything that happened from IO
-    let mut event_pump = sdl.event_pump().unwrap();
     // 'main is a label for an infinite loop
-    //
     'main: loop {
-        //println!("loop");
         // Gets all pending events that happened since last frame
         for event in event_pump.poll_iter() {
             match event {
@@ -82,55 +79,34 @@ fn main() {
             }
         }
 
-        // Animation logic here
+        // Get mouse
+        let mouse = event_pump.mouse_state();
+        println!("{:?}", (mouse.x(), mouse.y()));
 
-        //implement trait on vertex
-        if v1 >= 2.0 * PI {
-            v1 = 0.0
-        }
-        if v2 >= 2.0 * PI {
-            v2 = 0.0
-        }
-        if v3 >= 2.0 * PI {
-            v3 = 0.0
-        }
+        // Animation logic here
+        let (model)
+            = create_triangle_vertices(mouse, v1, v2, v3);
+        //Ensure we maintain the correct posits
+        v1 = v1.rem_euclid(2.0 * PI);
+        v2 = v2.rem_euclid(2.0 * PI);
+        v3 = v3.rem_euclid(2.0 * PI);
         v1 += 0.01;
         v2 += 0.01;
         v3 += 0.01;
-
-        let v1_x = v1.sin() * 0.5;
-        let v1_y = v1.cos() * 0.5;
-
-        let v2_x = v2.sin() * 0.5;
-        let v2_y = v2.cos() * 0.5;
-
-        let v3_x = v3.sin() * 0.5;
-        let v3_y = v3.cos() * 0.5;
-
-        //Sanity check: Get length of an edge
-        println!("{}",(((v1_x - v2_x)*(v1_x - v2_x) + (v1_y - v2_y)*(v1_y - v2_y)).abs()).sqrt() );
-
-        let new_vertices: &[f32] = &[
-            v1_x, v1_y, // v1
-            v2_x, v2_y, // v2
-            v3_x, v3_y, // v3
-        ];
 
         // Set up the window rendering
         unsafe {
             gl.clear_color(0.1, 0.2, 0.3, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT);
-
+            gl.bind_vertex_array(Some(vao));
             gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
             gl.buffer_data_u8_slice(
                 glow::ARRAY_BUFFER,
-                bytemuck::cast_slice(new_vertices),
+                bytemuck::cast_slice(&model),
                 glow::DYNAMIC_DRAW,
             );
-
             gl.use_program(Some(program));
-            gl.bind_vertex_array(Some(vao));
-            gl.draw_arrays(glow::TRIANGLES, 0, 3);
+            gl.draw_arrays(glow::TRIANGLES, 0, 3); // Will need to be expanded
         }
 
         // OpenGL will render into a back buffer
@@ -140,24 +116,71 @@ fn main() {
     }
 }
 
-unsafe fn setup_triangle(gl: &glow::Context) -> (glow::NativeProgram, glow::NativeVertexArray, glow::NativeBuffer) {
+fn create_triangle_vertices(mouse: MouseState, mut v1: f32, mut v2: f32, mut v3: f32)
+    -> ([f32; 6]) {
+
+    let v1_x;
+    let v2_x;
+    let v3_x;
+    let v1_y;
+    let v2_y;
+    let v3_y;
+
+    if mouse.is_mouse_button_pressed(sdl2::mouse::MouseButton::Left) {
+        let x = mouse.x() as f32 * 0.01;
+        let y = mouse.y() as f32 * 0.01;
+
+        v1_x = v1.sin() * 0.5 + x;
+        v1_y = v1.cos() * 0.5 - y;
+        v2_x = v2.sin() * 0.5 + x;
+        v2_y = v2.cos() * 0.5 - y;
+        v3_x = v3.sin() * 0.5 + x;
+        v3_y = v3.cos() * 0.5 - y;
+    } else {
+        v1_x = v1.sin() * 0.5;
+        v1_y = v1.cos() * 0.5;
+        v2_x = v2.sin() * 0.5;
+        v2_y = v2.cos() * 0.5;
+        v3_x = v3.sin() * 0.5;
+        v3_y = v3.cos() * 0.5;
+    }
+
+    //Sanity check: Get length of an edge
+    println!("{}", ((v1_x - v2_x) * (v1_x - v2_x) + (v1_y - v2_y) * (v1_y - v2_y)).abs().sqrt());
+
+    let new_vertices: [f32; 6] = [
+        v1_x, v1_y, // v1
+        v2_x, v2_y, // v2
+        v3_x, v3_y, // v3
+    ];
+
+    new_vertices
+}
+
+//unsafe fn setup_circle(gl: &glow::Context) -> (glow::NativeProgram, glow::NativeVertexArray, glow::NativeBuffer) {}
+//    let vertex = r#"#version 330 core
+//        layout(lovation=0) in vec2 pos;
+//        void main() { gl_Position = vec4(pos, 0.0, 1.0); }
+//       "#;
+//}
+
+unsafe fn setup_triangle(gl: &glow::Context, program: glow::NativeProgram) -> (glow::NativeProgram, glow::NativeVertexArray, glow::NativeBuffer) {
     //Same as shaders in C++
     // Vert shader
-    let vs_src = r#"#version 330 core
+    let vertex = r#"#version 330 core
         layout(location = 0) in vec2 pos;
         void main() { gl_Position = vec4(pos, 0.0, 1.0); }
     "#;
 
     // Frag shader
-    let fs_src = r#"#version 330 core
+    let fragment = r#"#version 330 core
         out vec4 color;
         void main() { color = vec4(1.0,0.5,0.2,1.0); }
     "#;
 
-    let program = gl.create_program().unwrap();
     for (src, shader_type) in [
-        (vs_src, glow::VERTEX_SHADER),
-        (fs_src, glow::FRAGMENT_SHADER),
+        (vertex, glow::VERTEX_SHADER),
+        (fragment, glow::FRAGMENT_SHADER),
     ] {
         let shader = gl.create_shader(shader_type).unwrap();
         gl.shader_source(shader, src);
@@ -182,15 +205,6 @@ unsafe fn setup_triangle(gl: &glow::Context) -> (glow::NativeProgram, glow::Nati
 
     let vbo = gl.create_buffer().unwrap();
     gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-
-    let vertices: &[f32] = &[-0.10, -0.5, 0.5, -0.10, 0.0, 0.5];
-    unsafe {
-        gl.buffer_data_u8_slice(
-            glow::ARRAY_BUFFER,
-            bytemuck::cast_slice(vertices),
-            glow::DYNAMIC_DRAW,
-        );
-    }
 
     gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
     gl.enable_vertex_attrib_array(0);
