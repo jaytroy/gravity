@@ -16,7 +16,7 @@ fn main() {
     gl_attr.set_context_version(3, 3);
 
     let window = video
-        .window("glow demo", 800, 600)
+        .window("Rust with GL", 800, 600)
         .opengl()
         .resizable()
         .build()
@@ -52,6 +52,7 @@ fn main() {
         println!("OpenGL Version: {}", version);
     }
 
+    // Set window
     unsafe {
         gl.viewport(0, 0, 800, 600);
         gl.clear_color(0.1, 0.2, 0.3, 1.0);
@@ -61,13 +62,14 @@ fn main() {
         let program_2d = gl.create_program().unwrap();
         setup_triangle(&gl, program_2d)
     };
-    println!("Created triangle");
 
     let mut v1: f32 = 0.0;
     let mut v2: f32 = 2.0 * PI / 3.0;
     let mut v3: f32 = 4.0 * PI / 3.0;
-    let mut mouse_x: f32 = 0.0;
-    let mut mouse_y: f32 = 0.0;
+    let mut mouse_down_x: f32 = 0.0;
+    let mut mouse_down_y: f32 = 0.0;
+    let mut offset_x: f32 = 0.0;
+    let mut offset_y: f32 = 0.0;
     // 'main is a label for an infinite loop
     'main: loop {
         // Gets all pending events that happened since last frame
@@ -77,26 +79,38 @@ fn main() {
                 // breaks the loop 'main when matched
                 // The _ => {} says when anything else is caught, do nothing
                 sdl2::event::Event::Quit { .. } => break 'main,
+                sdl2::event::Event::MouseButtonDown { mouse_btn: sdl2::mouse::MouseButton::Left, x, y, .. } => {
+                    //offset_x += (x as f32 - mouse_down_x) / 400.0;
+                    //offset_y += (y as f32 - mouse_down_y) / 300.0;
+                    //mouse_down_x = x as f32;
+                    //mouse_down_y = y as f32;
+                }
+                sdl2::event::Event::MouseButtonUp { mouse_btn: sdl2::mouse::MouseButton::Left, x, y, ..} => {
+                    // Divisions necessary for transition from pixel to GL NDC space
+                    //offset_x += (x as f32 - mouse_down_x) / 400.0;
+                    //offset_y += (y as f32 - mouse_down_y) / 300.0;
+                }
                 _ => {}
             }
         }
 
-        // Get mouse
-        let mouse = event_pump.mouse_state();
+        // Relative calculates diff automatically
+        // Mouse state directly needs your own calculation
+        let mouse = event_pump.relative_mouse_state();
         println!("{:?}", (mouse.x(), mouse.y()));
         if mouse.is_mouse_button_pressed(sdl2::mouse::MouseButton::Left) {
-            mouse_x = mouse.x() as f32 * 0.001;
-            mouse_y = mouse.y() as f32 * 0.001;
+            offset_x += mouse.x() as f32 / 400.0;
+            offset_y += mouse.y() as f32 / 300.0;
         }
 
         // Animation logic here
-        let (model)
-            = create_triangle_vertices(v1, v2, v3, &mouse_x, &mouse_y);
-        //Ensure we maintain the correct posits
-        println!("{}",model[0]);
         v1 = v1.rem_euclid(2.0 * PI);
         v2 = v2.rem_euclid(2.0 * PI);
         v3 = v3.rem_euclid(2.0 * PI);
+        let (model)
+            = create_triangle_vertices(v1, v2, v3, &offset_x, &offset_y);
+        //Ensure we maintain the correct posits
+        println!("{}",model[0]);
         v1 += 0.01;
         v2 += 0.01;
         v3 += 0.01;
@@ -133,8 +147,7 @@ fn create_triangle_vertices(mut v1: f32, mut v2: f32, mut v3: f32, x: &f32, y: &
     let v2_y;
     let v3_y;
 
-
-
+    // Calculate vertex position on circle
     v1_x = v1.sin() * 0.5 + x;
     v1_y = v1.cos() * 0.5 - y;
     v2_x = v2.sin() * 0.5 + x;
@@ -142,17 +155,17 @@ fn create_triangle_vertices(mut v1: f32, mut v2: f32, mut v3: f32, x: &f32, y: &
     v3_x = v3.sin() * 0.5 + x;
     v3_y = v3.cos() * 0.5 - y;
 
-
     //Sanity check: Get length of an edge
     println!("{}", ((v1_x - v2_x) * (v1_x - v2_x) + (v1_y - v2_y) * (v1_y - v2_y)).abs().sqrt());
 
-    let new_vertices: [f32; 6] = [
+    // Output vertex model
+    let model: [f32; 6] = [
         v1_x, v1_y, // v1
         v2_x, v2_y, // v2
         v3_x, v3_y, // v3
     ];
 
-    new_vertices
+    model
 }
 
 //unsafe fn setup_circle(gl: &glow::Context) -> (glow::NativeProgram, glow::NativeVertexArray, glow::NativeBuffer) {}
