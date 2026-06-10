@@ -96,6 +96,8 @@ fn main() {
 
         // Relative calculates diff automatically
         // Mouse state directly needs your own calculation
+        // Event mismatch/floating point calcs on direct mnouse state lead to errors
+        // aka unwanted dragging
         let mouse = event_pump.relative_mouse_state();
         println!("{:?}", (mouse.x(), mouse.y()));
         if mouse.is_mouse_button_pressed(sdl2::mouse::MouseButton::Left) {
