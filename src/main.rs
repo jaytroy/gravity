@@ -66,6 +66,8 @@ fn main() {
     let mut v1: f32 = 0.0;
     let mut v2: f32 = 2.0 * PI / 3.0;
     let mut v3: f32 = 4.0 * PI / 3.0;
+    let mut mouse_x: f32 = 0.0;
+    let mut mouse_y: f32 = 0.0;
     // 'main is a label for an infinite loop
     'main: loop {
         // Gets all pending events that happened since last frame
@@ -82,11 +84,16 @@ fn main() {
         // Get mouse
         let mouse = event_pump.mouse_state();
         println!("{:?}", (mouse.x(), mouse.y()));
+        if mouse.is_mouse_button_pressed(sdl2::mouse::MouseButton::Left) {
+            mouse_x = mouse.x() as f32 * 0.001;
+            mouse_y = mouse.y() as f32 * 0.001;
+        }
 
         // Animation logic here
         let (model)
-            = create_triangle_vertices(mouse, v1, v2, v3);
+            = create_triangle_vertices(v1, v2, v3, &mouse_x, &mouse_y);
         //Ensure we maintain the correct posits
+        println!("{}",model[0]);
         v1 = v1.rem_euclid(2.0 * PI);
         v2 = v2.rem_euclid(2.0 * PI);
         v3 = v3.rem_euclid(2.0 * PI);
@@ -116,7 +123,7 @@ fn main() {
     }
 }
 
-fn create_triangle_vertices(mouse: MouseState, mut v1: f32, mut v2: f32, mut v3: f32)
+fn create_triangle_vertices(mut v1: f32, mut v2: f32, mut v3: f32, x: &f32, y: &f32)
     -> ([f32; 6]) {
 
     let v1_x;
@@ -126,24 +133,15 @@ fn create_triangle_vertices(mouse: MouseState, mut v1: f32, mut v2: f32, mut v3:
     let v2_y;
     let v3_y;
 
-    if mouse.is_mouse_button_pressed(sdl2::mouse::MouseButton::Left) {
-        let x = mouse.x() as f32 * 0.01;
-        let y = mouse.y() as f32 * 0.01;
 
-        v1_x = v1.sin() * 0.5 + x;
-        v1_y = v1.cos() * 0.5 - y;
-        v2_x = v2.sin() * 0.5 + x;
-        v2_y = v2.cos() * 0.5 - y;
-        v3_x = v3.sin() * 0.5 + x;
-        v3_y = v3.cos() * 0.5 - y;
-    } else {
-        v1_x = v1.sin() * 0.5;
-        v1_y = v1.cos() * 0.5;
-        v2_x = v2.sin() * 0.5;
-        v2_y = v2.cos() * 0.5;
-        v3_x = v3.sin() * 0.5;
-        v3_y = v3.cos() * 0.5;
-    }
+
+    v1_x = v1.sin() * 0.5 + x;
+    v1_y = v1.cos() * 0.5 - y;
+    v2_x = v2.sin() * 0.5 + x;
+    v2_y = v2.cos() * 0.5 - y;
+    v3_x = v3.sin() * 0.5 + x;
+    v3_y = v3.cos() * 0.5 - y;
+
 
     //Sanity check: Get length of an edge
     println!("{}", ((v1_x - v2_x) * (v1_x - v2_x) + (v1_y - v2_y) * (v1_y - v2_y)).abs().sqrt());
