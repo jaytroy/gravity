@@ -3,7 +3,7 @@ mod triangle;
 use triangle::*;
 
 use std::f32::consts::PI;
-use glow::HasContext;
+use glow::{HasContext, NativeUniformLocation};
 
 fn main() {
     // Init sdl
@@ -76,6 +76,10 @@ fn main() {
 
     let mut offset_x: f32 = 0.0;
     let mut offset_y: f32 = 0.0;
+
+    //Gets color location of frag shadeer
+    let color_loc = unsafe { gl.get_uniform_location(program, "uColor") };
+
     // 'main is a label for an infinite loop
     'main: loop {
         // Gets all pending events that happened since last frame
@@ -91,7 +95,7 @@ fn main() {
                     //mouse_down_x = x as f32;
                     //mouse_down_y = y as f32;
                 }
-                sdl2::event::Event::MouseButtonUp { mouse_btn: sdl2::mouse::MouseButton::Left, x, y, ..} => {
+                sdl2::event::Event::MouseButtonUp { mouse_btn: sdl2::mouse::MouseButton::Left, x, y, .. } => {
                     // Divisions necessary for transition from pixel to GL NDC space
                     //offset_x += (x as f32 - mouse_down_x) / 400.0;
                     //offset_y += (y as f32 - mouse_down_y) / 300.0;
@@ -134,7 +138,13 @@ fn main() {
                 glow::DYNAMIC_DRAW,
             );
             gl.use_program(Some(program));
-            gl.draw_arrays(glow::TRIANGLES, 0,  6);
+
+            //offset starts at 0 => draw 1st triangle
+            gl.uniform_3_f32(color_loc.as_ref(), 0.0, 0.0, 1.0);
+            gl.draw_arrays(glow::TRIANGLES, 0, 3);
+            //offset starts at 3 => draw 2nd triangle
+            gl.uniform_3_f32(color_loc.as_ref(), 1.0, 0.0, 0.0);
+            gl.draw_arrays(glow::TRIANGLES, 3, 3);
         }
 
         // OpenGL will render into a back buffer

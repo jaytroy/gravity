@@ -89,57 +89,58 @@ pub fn create_triangle_vertices(triangle: &Triangle, x: &f32, y: &f32) -> Vec<f3
 //       "#;
 //}
 
-pub unsafe fn setup_triangle(
-    gl: &glow::Context,
-    program: glow::NativeProgram,
-) -> (
-    glow::NativeProgram,
-    glow::NativeVertexArray,
-    glow::NativeBuffer,
-) {
-    //Same as shaders in C++
-    // Vert shader
-    let vertex = r#"#version 330 core
-        layout(location = 0) in vec2 pos;
-        void main() { gl_Position = vec4(pos, 0.0, 1.0); }
-    "#;
+    pub unsafe fn setup_triangle(
+        gl: &glow::Context,
+        program: glow::NativeProgram,
+    ) -> (
+        glow::NativeProgram,
+        glow::NativeVertexArray,
+        glow::NativeBuffer,
+    ) {
+        //Same as shaders in C++
+        // Vert shader
+        let vertex = r#"#version 330 core
+            layout(location = 0) in vec2 pos;
+            void main() { gl_Position = vec4(pos, 0.0, 1.0); }
+        "#;
 
-    // Frag shader
-    let fragment = r#"#version 330 core
-        out vec4 color;
-        void main() { color = vec4(0.0,0.0,1.0,1.0); }
-    "#;
+        // Frag shader
+        let fragment = r#"#version 330 core
+            out vec4 FragColor;
+            uniform vec3 uColor;
+            void main() { FragColor = vec4(uColor, 1.0); }
+        "#;
 
-    for (src, shader_type) in [
-        (vertex, glow::VERTEX_SHADER),
-        (fragment, glow::FRAGMENT_SHADER),
-    ] {
-        let shader = gl.create_shader(shader_type).unwrap();
-        gl.shader_source(shader, src);
-        gl.compile_shader(shader);
+        for (src, shader_type) in [
+            (vertex, glow::VERTEX_SHADER),
+            (fragment, glow::FRAGMENT_SHADER),
+        ] {
+            let shader = gl.create_shader(shader_type).unwrap();
+            gl.shader_source(shader, src);
+            gl.compile_shader(shader);
+            assert!(
+                gl.get_shader_compile_status(shader),
+                "{}",
+                gl.get_shader_info_log(shader)
+            );
+            gl.attach_shader(program, shader);
+            gl.delete_shader(shader);
+        }
+        gl.link_program(program);
         assert!(
-            gl.get_shader_compile_status(shader),
+            gl.get_program_link_status(program),
             "{}",
-            gl.get_shader_info_log(shader)
+            gl.get_program_info_log(program)
         );
-        gl.attach_shader(program, shader);
-        gl.delete_shader(shader);
+
+        let vao = gl.create_vertex_array().unwrap();
+        gl.bind_vertex_array(Some(vao));
+
+        let vbo = gl.create_buffer().unwrap();
+        gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
+
+        gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
+        gl.enable_vertex_attrib_array(0);
+
+        (program, vao, vbo)
     }
-    gl.link_program(program);
-    assert!(
-        gl.get_program_link_status(program),
-        "{}",
-        gl.get_program_info_log(program)
-    );
-
-    let vao = gl.create_vertex_array().unwrap();
-    gl.bind_vertex_array(Some(vao));
-
-    let vbo = gl.create_buffer().unwrap();
-    gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
-
-    gl.vertex_attrib_pointer_f32(0, 2, glow::FLOAT, false, 8, 0);
-    gl.enable_vertex_attrib_array(0);
-
-    (program, vao, vbo)
-}
