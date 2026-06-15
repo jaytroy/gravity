@@ -65,10 +65,14 @@ fn main() {
         setup_triangle(&gl, program_2d)
     };
 
-    let mut v1: f32 = 0.0;
-    let mut v2: f32 = 2.0 * PI / 3.0;
-    let mut v3: f32 = 4.0 * PI / 3.0;
-    let mut triangle: Triangle = Triangle::new(v1, v2, v3);
+    let v1: f32 = 0.0;
+    let v2: f32 = 2.0 * PI / 3.0;
+    let v3: f32 = 4.0 * PI / 3.0;
+    let mut triangle1: Triangle = Triangle::new(v1, v2, v3);
+    let mut triangle2: Triangle = Triangle::new(v3, v1, v2);
+
+    let mut model: Vec<f32> = Vec::new();
+    let inc: f32 = 0.01;
 
     let mut offset_x: f32 = 0.0;
     let mut offset_y: f32 = 0.0;
@@ -108,20 +112,20 @@ fn main() {
         }
 
         // Animation logic here
-        // Ensure vertices don't drift
-        triangle.v1 = triangle.v1.rem_euclid(2.0 * PI);
-        triangle.v2 = triangle.v2.rem_euclid(2.0 * PI);
-        triangle.v3 = triangle.v3.rem_euclid(2.0 * PI);
-        let (model)
-            = create_triangle_vertices(&triangle, &offset_x, &offset_y); //is this thread safe? probably cause it's not async
-        triangle.v1 += 0.01;
-        triangle.v2 += 0.01;
-        triangle.v3 += 0.01;
+        triangle1.clamp_euclid();
+        triangle2.clamp_euclid();
+
+        model.extend(create_triangle_vertices(&triangle1, &offset_x, &offset_y)); //is this thread safe? probably, cause it's not async
+        model.extend(create_triangle_vertices(&triangle2, &0.0, &0.0));
+
+        triangle1.rotate(inc);
+        triangle2.rotate(-inc);
 
         // Set up the window rendering
         unsafe {
             gl.clear_color(0.1, 0.2, 0.3, 1.0);
             gl.clear(glow::COLOR_BUFFER_BIT);
+
             gl.bind_vertex_array(Some(vao));
             gl.bind_buffer(glow::ARRAY_BUFFER, Some(vbo));
             gl.buffer_data_u8_slice(
@@ -130,12 +134,15 @@ fn main() {
                 glow::DYNAMIC_DRAW,
             );
             gl.use_program(Some(program));
-            gl.draw_arrays(glow::TRIANGLES, 0, 6); // Will need to be expanded
+            gl.draw_arrays(glow::TRIANGLES, 0,  6);
         }
 
         // OpenGL will render into a back buffer
         // This swaps the back buffer with the one we just wiped, rending our image
         // => double buffering
         window.gl_swap_window();
+
+        //Cleanup
+        model.clear();
     }
 }

@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use glow::HasContext;
 
 //give it getters?
@@ -24,6 +25,19 @@ impl Triangle {
             v2,
             v3,
         }
+    }
+
+    //Ensures that vertices don't drift
+    pub fn clamp_euclid(&mut self) {
+        self.v1 = self.v1.rem_euclid(2.0 * PI);
+        self.v2 = self.v2.rem_euclid(2.0 * PI);
+        self.v3 = self.v3.rem_euclid(2.0 * PI);
+    }
+
+    pub fn rotate(&mut self, i: f32) {
+        self.v1 += i;
+        self.v2 += i;
+        self.v3 += i;
     }
 }
 
