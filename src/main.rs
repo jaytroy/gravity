@@ -1,5 +1,8 @@
 mod planet;
 mod triangle;
+mod app;
+mod renderer;
+
 use triangle::*;
 
 use egui_sdl2_gl as egui_backend;
@@ -9,6 +12,8 @@ use egui_backend::egui::FullOutput;
 use std::time::Instant;
 use glow::HasContext;
 use std::f32::consts::PI;
+
+use rand::RngExt;
 
 fn main() {
     // Init sdl
@@ -79,8 +84,11 @@ fn main() {
     let v1: f32 = 0.0;
     let v2: f32 = 2.0 * PI / 3.0;
     let v3: f32 = 4.0 * PI / 3.0;
-    let mut triangle1: Triangle = Triangle::new(v1, v2, v3);
-    let mut triangle2: Triangle = Triangle::new(v3, v1, v2);
+    //let mut triangle1: Triangle = Triangle::new(v1, v2, v3, 1.0);
+    //let mut triangle2: Triangle = Triangle::new(v3, v1, v2, 0.5);
+    let mut triangles: Vec<Triangle> = Vec::new();
+    //triangles.push(triangle1);
+    //triangles.push(triangle2);
 
     let mut model: Vec<f32> = Vec::new();
     let inc: f32 = 0.01;
@@ -122,14 +130,16 @@ fn main() {
         }
 
         // Animation logic here
-        triangle1.clamp_euclid();
-        triangle2.clamp_euclid();
 
-        model.extend(create_triangle_vertices(&triangle1, &offset_x, &offset_y)); //is this thread safe? probably, cause it's not async
-        model.extend(create_triangle_vertices(&triangle2, &0.0, &0.0));
+        for triangle in &mut triangles {
+            &triangle.clamp_euclid();
+            // Define a transform struct.
+            // Will be separate from triangle itself.
+            // Will hold posit data.
+            model.extend(create_triangle_vertices(&triangle, &offset_x, &offset_y));
+            triangle.rotate(inc);
+        }
 
-        triangle1.rotate(inc);
-        triangle2.rotate(-inc);
 
         // Set up the window rendering
         unsafe {
@@ -145,12 +155,14 @@ fn main() {
             );
             gl.use_program(Some(program));
 
-            //offset starts at 0 => draw 1st triangle
-            gl.uniform_3_f32(color_loc.as_ref(), 0.0, 0.0, 1.0);
-            gl.draw_arrays(glow::TRIANGLES, 0, 3);
-            //offset starts at 3 => draw 2nd triangle
-            gl.uniform_3_f32(color_loc.as_ref(), 1.0, 0.0, 0.0);
-            gl.draw_arrays(glow::TRIANGLES, 3, 3);
+
+            let num_triangles = triangles.len() as i32;
+            for i in 0..num_triangles {
+                let mut rng = rand::rng();
+
+                gl.uniform_3_f32(color_loc.as_ref(), 0.0, 0.0, 1.0);
+                gl.draw_arrays(glow::TRIANGLES, i*3, 3);
+            }
         }
         model.clear(); //Cleanup
 
@@ -159,8 +171,17 @@ fn main() {
 
         // egui widgets controlled here
         egui::Window::new("Controls").show(&egui_ctx, |ui| {
-            ui.label("Hello on top of GL!");
+            ui.label("testing GUI");
 
+            if ui.button("Reset").clicked() {
+                offset_x = 0.0;
+                offset_y = 0.0;
+            }
+
+            if ui.button("Add").clicked() {
+                let triangle = Triangle::new(v2, v3, v1, -1.0);
+                triangles.push(triangle);
+            }
         });
 
         let FullOutput {
