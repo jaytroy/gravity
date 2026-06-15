@@ -4,7 +4,6 @@ use glow::HasContext;
 //give it getters?
 pub struct Triangle {
     id: i8,
-    rotation: f32,
     pub v1: f32,
     pub v2: f32,
     pub v3: f32,
@@ -12,7 +11,7 @@ pub struct Triangle {
 }
 
 impl Triangle {
-    pub fn new(v1: f32, v2: f32, v3: f32, rotation: f32) -> Triangle {
+    pub fn new(v1: f32, v2: f32, v3: f32) -> Triangle {
         let id = 0;
         let is_selected = false;
 
@@ -24,7 +23,6 @@ impl Triangle {
 
         Triangle {
             id,
-            rotation,
             v1,
             v2,
             v3,
@@ -40,11 +38,7 @@ impl Triangle {
         self.v3 = self.v3.rem_euclid(2.0 * PI);
     }
 
-    pub fn rotate(&mut self, i: f32) {
-        self.v1 += i * self.rotation;
-        self.v2 += i * self.rotation;
-        self.v3 += i * self.rotation;
-    }
+    
 }
 
 fn check_vertices(vertices: &Vec<f32>) {
