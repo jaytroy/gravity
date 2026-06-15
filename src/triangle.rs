@@ -7,11 +7,13 @@ pub struct Triangle {
     pub v1: f32,
     pub v2: f32,
     pub v3: f32,
+    pub is_selected: bool,
 }
 
 impl Triangle {
     pub fn new(v1: f32, v2: f32, v3: f32) -> Triangle {
         let id = 0;
+        let is_selected = false;
 
         let mut vert: Vec<f32> = Vec::new();
         vert.push(v1);
@@ -24,6 +26,7 @@ impl Triangle {
             v1,
             v2,
             v3,
+            is_selected,
         }
     }
 

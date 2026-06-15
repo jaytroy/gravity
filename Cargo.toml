@@ -8,5 +8,8 @@ edition = "2024"
 bytemuck = "1.25.0"
 # OpenGL bindings
 glow = "0.17.0"
-# Bindings for a cross platform C library that provides access to IO & graphics
+# Bindings for a cross-platform C library that provides access to IO & graphics
 sdl2 = { version = "0.38", features = ["bundled"] }
+# GUI framework
+egui = "0.34"
+egui_sdl2_gl = "0.33"

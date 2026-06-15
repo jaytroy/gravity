@@ -2,8 +2,13 @@ mod planet;
 mod triangle;
 use triangle::*;
 
+use egui_sdl2_gl as egui_backend;
+use egui_backend::{egui, DpiScaling, ShaderVersion};
+use egui_backend::egui::FullOutput;
+
+use std::time::Instant;
+use glow::HasContext;
 use std::f32::consts::PI;
-use glow::{HasContext, NativeUniformLocation};
 
 fn main() {
     // Init sdl
@@ -30,6 +35,11 @@ fn main() {
     let gl_context = window.gl_create_context().unwrap();
     window.gl_make_current(&gl_context).unwrap();
 
+    let (mut painter, mut egui_state) =
+        egui_backend::with_sdl2(&window, ShaderVersion::Default, DpiScaling::Default);
+    let egui_ctx = egui::Context::default();
+    let start_time = Instant::now();
+
     // Gets sdl2's event queue. Anything that happened from IO
     let mut event_pump = sdl.event_pump().unwrap();
 
@@ -43,6 +53,7 @@ fn main() {
         glow::Context::from_loader_function(|s| video.gl_get_proc_address(s) as *const _)
     };
     println!("Created gl");
+
 
     //GPU log
     unsafe {
@@ -90,17 +101,12 @@ fn main() {
                 // The _ => {} says when anything else is caught, do nothing
                 sdl2::event::Event::Quit { .. } => break 'main,
                 sdl2::event::Event::MouseButtonDown { mouse_btn: sdl2::mouse::MouseButton::Left, x, y, .. } => {
-                    //offset_x += (x as f32 - mouse_down_x) / 400.0;
-                    //offset_y += (y as f32 - mouse_down_y) / 300.0;
-                    //mouse_down_x = x as f32;
-                    //mouse_down_y = y as f32;
+                    println!("clicked at {} {}", x, y);
+                    egui_state.process_input(&window, event, &mut painter);
                 }
-                sdl2::event::Event::MouseButtonUp { mouse_btn: sdl2::mouse::MouseButton::Left, x, y, .. } => {
-                    // Divisions necessary for transition from pixel to GL NDC space
-                    //offset_x += (x as f32 - mouse_down_x) / 400.0;
-                    //offset_y += (y as f32 - mouse_down_y) / 300.0;
+                _ => {
+                    egui_state.process_input(&window, event, &mut painter);
                 }
-                _ => {}
             }
         }
 
@@ -146,13 +152,33 @@ fn main() {
             gl.uniform_3_f32(color_loc.as_ref(), 1.0, 0.0, 0.0);
             gl.draw_arrays(glow::TRIANGLES, 3, 3);
         }
+        model.clear(); //Cleanup
+
+        egui_state.input.time = Some(start_time.elapsed().as_secs_f64());
+        egui_ctx.begin_pass(egui_state.input.take());
+
+        // egui widgets controlled here
+        egui::Window::new("Controls").show(&egui_ctx, |ui| {
+            ui.label("Hello on top of GL!");
+
+        });
+
+        let FullOutput {
+            platform_output,
+            textures_delta,
+            shapes,
+            pixels_per_point,
+            ..
+        } = egui_ctx.end_pass();
+
+        egui_state.process_output(&window, &platform_output);
+        let paint_jobs = egui_ctx.tessellate(shapes, pixels_per_point);
+        painter.paint_jobs(None, textures_delta, paint_jobs);
 
         // OpenGL will render into a back buffer
         // This swaps the back buffer with the one we just wiped, rending our image
         // => double buffering
         window.gl_swap_window();
 
-        //Cleanup
-        model.clear();
     }
 }
